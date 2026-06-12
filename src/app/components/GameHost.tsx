@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { GameLoop } from '../../engine/GameLoop'
 import { Input } from '../../engine/Input'
 import { Renderer } from '../../engine/Renderer'
@@ -8,7 +9,13 @@ import type { GameEntry } from '../../games/registry'
 import { audio } from '../../engine/Audio'
 import { store } from '../../data/store'
 import type { Achievement } from '../../data/achievements'
+import { submitScore } from '../../data/leaderboard'
 import { HelpModal } from './HelpModal'
+
+export interface Challenge {
+  score: number
+  by: string | null
+}
 
 type Phase = 'ready' | 'playing' | 'over'
 
@@ -23,11 +30,13 @@ const SIZE_LABELS: Record<BoardSize, string> = {
  * arranca el loop e input, y traduce los eventos del juego a estado de UI (fase, score).
  * El loop se congela mientras el modal de ayuda está abierto.
  */
-export function GameHost({ entry }: { entry: GameEntry }) {
+export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: Challenge }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Game | null>(null)
   const pausedRef = useRef(false)
+  const challengeRef = useRef(challenge)
+  const beatenRef = useRef(false)
 
   const [size, setSize] = useState<BoardSize>(entry.defaultSize ?? 'normal')
   const [phase, setPhase] = useState<Phase>('ready')
@@ -38,6 +47,7 @@ export function GameHost({ entry }: { entry: GameEntry }) {
   const [best, setBest] = useState(() => store.getBest(entry.meta.id))
   const [newBest, setNewBest] = useState(false)
   const [toasts, setToasts] = useState<Achievement[]>([])
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -47,16 +57,26 @@ export function GameHost({ entry }: { entry: GameEntry }) {
     const emit = (e: GameEvent) => {
       if (e.type === 'score') {
         setScore(e.value)
+        const ch = challengeRef.current
+        if (ch && !beatenRef.current && e.value > ch.score) {
+          beatenRef.current = true
+          setToasts((t) => [
+            ...t,
+            { id: 'reto', name: '¡Reto superado!', desc: `Pasaste los ${ch.score} puntos`, icon: '🔥' },
+          ])
+        }
       } else if (e.type === 'gameover') {
         setFinalScore(e.score)
         const res = store.recordScore(entry.meta.id, e.score)
         setBest(res.best)
         setNewBest(res.isBest)
         if (res.unlocked.length > 0) setToasts((t) => [...t, ...res.unlocked])
+        if (e.score > 0) void submitScore(entry.meta.id, e.score)
       } else if (e.type === 'state') {
         if (e.state === 'playing') {
           setPhase('playing')
           setNewBest(false)
+          beatenRef.current = false
         } else {
           setPhase(e.state === 'over' ? 'over' : 'ready')
         }
@@ -104,6 +124,10 @@ export function GameHost({ entry }: { entry: GameEntry }) {
     return () => clearTimeout(t)
   }, [toasts])
 
+  useEffect(() => {
+    challengeRef.current = challenge
+  }, [challenge])
+
   const start = () => {
     audio.unlock()
     gameRef.current?.start()
@@ -118,6 +142,27 @@ export function GameHost({ entry }: { entry: GameEntry }) {
     const next = !muted
     audio.setMuted(next)
     setMuted(next)
+  }
+  const share = async () => {
+    const target = Math.max(best, score)
+    const url = `${location.origin}/play/${entry.meta.id}?reto=${target}&por=${encodeURIComponent(
+      store.getProfile().name,
+    )}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: '🕹️ Arcade', text: `¿Superas mis ${target} en ${entry.meta.name}?`, url })
+        return
+      }
+    } catch {
+      /* el usuario canceló el diálogo: caemos al portapapeles */
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* sin portapapeles disponible */
+    }
   }
 
   const sizes = entry.sizes
@@ -163,6 +208,12 @@ export function GameHost({ entry }: { entry: GameEntry }) {
           {phase === 'ready' && (
             <div className="overlay">
               <h2 className="overlay-title">{entry.meta.name}</h2>
+              {challenge && (
+                <p className="challenge-banner">
+                  {challenge.by ? `${challenge.by} te reta` : 'Reto'}: supera{' '}
+                  <strong>{challenge.score}</strong>
+                </p>
+              )}
               {sizePicker}
               <button className="btn-primary" onClick={start}>
                 ▶ Iniciar
@@ -195,6 +246,12 @@ export function GameHost({ entry }: { entry: GameEntry }) {
             <span className="hud-label">Récord</span>
             <span className="hud-record">{best}</span>
           </div>
+          {challenge && (
+            <div className="hud">
+              <span className="hud-label">Meta del reto</span>
+              <span className="hud-goal">{challenge.score}</span>
+            </div>
+          )}
           <button className="side-help" onClick={() => setShowHelp(true)}>
             <span className="side-help-icon">ℹ️</span>
             <span>Cómo jugar</span>
@@ -202,6 +259,14 @@ export function GameHost({ entry }: { entry: GameEntry }) {
           <button className="side-help" onClick={toggleMute}>
             <span className="side-help-icon">{muted ? '🔇' : '🔊'}</span>
             <span>{muted ? 'Sonido off' : 'Sonido on'}</span>
+          </button>
+          <Link to={`/leaderboard/${entry.meta.id}`} className="side-help">
+            <span className="side-help-icon">🏆</span>
+            <span>Ranking</span>
+          </Link>
+          <button className="side-help" onClick={share}>
+            <span className="side-help-icon">{copied ? '✅' : '🔗'}</span>
+            <span>{copied ? 'Link copiado' : 'Retar a alguien'}</span>
           </button>
         </aside>
       </div>

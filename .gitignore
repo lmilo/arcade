@@ -22,6 +22,10 @@ dist-ssr/
 *.local
 .vite/
 
+# Backend
+server/*.db
+server/.venv/
+
 # IDEs
 .vscode/
 .idea/

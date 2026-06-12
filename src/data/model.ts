@@ -23,6 +23,7 @@ export interface Persisted {
   profile: Profile
   stats: Record<string, GameStats>
   achievements: string[]
+  deviceId?: string
 }
 
 export const STORE_VERSION = 1
@@ -41,5 +42,6 @@ export function defaultPersisted(): Persisted {
     },
     stats: {},
     achievements: [],
+    deviceId: crypto.randomUUID(),
   }
 }

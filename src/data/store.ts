@@ -44,6 +44,14 @@ class LocalStore {
     return this.data.achievements
   }
 
+  getDeviceId(): string {
+    if (!this.data.deviceId) {
+      this.data.deviceId = crypto.randomUUID()
+      this.save()
+    }
+    return this.data.deviceId
+  }
+
   recordScore(gameId: string, score: number): RecordResult {
     const prev = this.data.stats[gameId] ?? emptyStats()
     const isBest = score > prev.best
