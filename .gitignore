@@ -16,6 +16,12 @@ build/
 dist/
 *.manifest
 
+# Node / Vite
+node_modules/
+dist-ssr/
+*.local
+.vite/
+
 # IDEs
 .vscode/
 .idea/
