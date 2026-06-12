@@ -8,6 +8,18 @@ import { Flappy } from './flappy/Flappy'
 import { Invaders } from './invaders/Invaders'
 import { Pong } from './pong/Pong'
 import { Memory } from './memory/Memory'
+import { Minesweeper } from './minesweeper/Minesweeper'
+import { TicTacToe } from './tictactoe/TicTacToe'
+import { ConnectFour } from './connect4/ConnectFour'
+import { Simon } from './simon/Simon'
+import { WhackAMole } from './whack/WhackAMole'
+import { Asteroids } from './asteroids/Asteroids'
+import { Dodge } from './dodge/Dodge'
+import { Tron } from './tron/Tron'
+import { Jumper } from './jumper/Jumper'
+import { Frogger } from './frogger/Frogger'
+import { Defense } from './defense/Defense'
+import { LightsOut } from './lightsout/LightsOut'
 
 export interface GameEntry {
   meta: GameMeta
@@ -158,6 +170,198 @@ export const GAMES: GameEntry[] = [
       },
     },
     create: (emit, size) => new Memory(emit, size),
+  },
+  {
+    meta: {
+      id: 'mines',
+      name: 'Buscaminas',
+      emoji: '🚩',
+      tagline: 'Destapa sin pisar una mina',
+      controls: 'Clic para destapar · botón 🚩 para marcar',
+      help: {
+        rules: 'El tablero esconde 10 minas. Cada casilla destapada muestra cuántas minas la rodean; con esas pistas deduces dónde NO hay minas.',
+        howTo: 'Toca una casilla para destaparla (la primera siempre es segura). Activa el modo 🚩 arriba para marcar las que crees que son minas.',
+        win: 'Ganas al destapar todas las casillas sin mina. Cuantas más destapas, más puntos.',
+        lose: 'Si destapas una mina, pierdes al instante.',
+      },
+    },
+    create: (emit, size) => new Minesweeper(emit, size),
+  },
+  {
+    meta: {
+      id: 'tictactoe',
+      name: 'Tic-Tac-Toe',
+      emoji: '❌',
+      tagline: 'Tres en raya contra la IA',
+      controls: 'Clic / toque para poner tu X',
+      help: {
+        rules: 'Tú eres X, la IA es O. Gana quien alinee tres en fila, columna o diagonal.',
+        howTo: 'Toca una casilla libre para poner tu X; la IA responde. Cada victoria suma a tu racha; un empate reinicia la ronda.',
+        win: 'No tiene final: encadena el máximo de victorias seguidas contra la IA.',
+        lose: 'Si la IA te gana una ronda, se acaba la racha.',
+      },
+    },
+    create: (emit, size) => new TicTacToe(emit, size),
+  },
+  {
+    meta: {
+      id: 'connect4',
+      name: 'Conecta 4',
+      emoji: '🔵',
+      tagline: 'Cuatro en línea contra la IA',
+      controls: 'Clic en una columna para soltar ficha',
+      help: {
+        rules: 'Tú juegas rojo, la IA amarillo. Suelta fichas en las columnas; gana quien conecte 4 en línea (horizontal, vertical o diagonal).',
+        howTo: 'Toca una columna para soltar tu ficha, que cae hasta el fondo. La IA responde. Cada victoria suma a tu racha.',
+        win: 'No tiene final: encadena el máximo de victorias seguidas.',
+        lose: 'Si la IA conecta 4 antes que tú, se acaba la racha.',
+      },
+    },
+    create: (emit, size) => new ConnectFour(emit, size),
+  },
+  {
+    meta: {
+      id: 'simon',
+      name: 'Simon',
+      emoji: '🔴',
+      tagline: 'Repite la secuencia de colores',
+      controls: 'Clic / toque en los cuadrantes',
+      help: {
+        rules: 'El tablero muestra una secuencia de colores que crece de a uno cada ronda. Debes repetirla completa y en orden.',
+        howTo: 'Observa la secuencia que se ilumina y luego tócala en el mismo orden. Si aciertas, se añade un color y la secuencia se hace más larga.',
+        win: 'No tiene final: cada ronda completada suma un punto. El reto es memorizar secuencias cada vez más largas.',
+        lose: 'Pierdes en cuanto tocas un color fuera de orden.',
+      },
+    },
+    create: (emit, size) => new Simon(emit, size),
+  },
+  {
+    meta: {
+      id: 'whack',
+      name: 'Topos',
+      emoji: '🔨',
+      tagline: 'Aporrea topos contrarreloj',
+      controls: 'Clic / toque sobre el topo',
+      help: {
+        rules: 'Los topos asoman por sus agujeros durante poco tiempo. Golpéalos antes de que se escondan.',
+        howTo: 'Toca o haz clic sobre un topo cuando esté fuera. Conforme pasa el tiempo asoman más rápido y duran menos.',
+        win: 'Tienes 30 segundos: el reto es golpear la mayor cantidad posible.',
+        lose: 'No se puede perder; cuando se acaba el tiempo, se cuenta tu marca.',
+      },
+    },
+    create: (emit, size) => new WhackAMole(emit, size),
+  },
+  {
+    meta: {
+      id: 'asteroids',
+      name: 'Asteroids',
+      emoji: '🚀',
+      tagline: 'Destruye la lluvia de rocas',
+      controls: '← → girar · ↑ impulso · Espacio disparar',
+      help: {
+        rules: 'Pilotas una nave en gravedad cero. Dispara a los asteroides: los grandes se parten en otros más pequeños.',
+        howTo: 'Gira con ← →, impúlsate con ↑ (la inercia te arrastra) y dispara con Espacio. La pantalla envuelve: si sales por un lado, apareces por el otro.',
+        win: 'Limpia todas las rocas para pasar a una oleada mayor. Las rocas pequeñas valen más puntos.',
+        lose: 'Tienes 3 vidas: pierdes una si una roca golpea tu nave.',
+      },
+    },
+    create: (emit, size) => new Asteroids(emit, size),
+  },
+  {
+    meta: {
+      id: 'dodge',
+      name: 'Esquiva',
+      emoji: '🌠',
+      tagline: 'Esquiva la lluvia que cae',
+      controls: 'Mouse / ← → mover',
+      help: {
+        rules: 'Caen bloques desde arriba cada vez más rápido. Muévete para que no te toquen.',
+        howTo: 'Mueve tu nave con el mouse, el dedo o ← →. Sumas puntos por sobrevivir y por cada bloque esquivado.',
+        win: 'No tiene final: el reto es aguantar el máximo de tiempo y puntuación.',
+        lose: 'Tienes 3 vidas: pierdes una con cada golpe.',
+      },
+    },
+    create: (emit, size) => new Dodge(emit, size),
+  },
+  {
+    meta: {
+      id: 'tron',
+      name: 'Tron',
+      emoji: '🟦',
+      tagline: 'Duelo de estelas contra la IA',
+      controls: 'Flechas / WASD / swipe para girar',
+      help: {
+        rules: 'Tu moto deja una estela sólida y nunca se detiene. La IA también. Choca contra una estela o el muro y pierdes.',
+        howTo: 'Gira con las flechas, WASD o swipe para encerrar a la IA y obligarla a chocar, sin chocar tú primero.',
+        win: 'Cada ronda que ganas suma un punto y la siguiente va más rápido.',
+        lose: 'Pierdes en cuanto chocas contra un muro o una estela.',
+      },
+    },
+    create: (emit, size) => new Tron(emit, size),
+  },
+  {
+    meta: {
+      id: 'jumper',
+      name: 'Saltarín',
+      emoji: '🦘',
+      tagline: 'Salta lo más alto que puedas',
+      controls: 'Mouse / ← → mover',
+      help: {
+        rules: 'Tu personaje rebota solo al caer sobre las plataformas. El objetivo es subir lo más alto posible.',
+        howTo: 'Muévete con el mouse, el dedo o ← → para caer sobre las plataformas (los lados se conectan: sales por uno y entras por el otro).',
+        win: 'No tiene final: la puntuación es la altura que alcanzas.',
+        lose: 'Pierdes si fallas las plataformas y caes fuera de la pantalla.',
+      },
+    },
+    create: (emit, size) => new Jumper(emit, size),
+  },
+  {
+    meta: {
+      id: 'frogger',
+      name: 'Cruce',
+      emoji: '🐸',
+      tagline: 'Cruza esquivando el tráfico',
+      controls: 'Flechas / WASD / swipe',
+      help: {
+        rules: 'Lleva a la rana de abajo hasta arriba cruzando los carriles llenos de autos.',
+        howTo: 'Muévete casilla por casilla con las flechas, WASD o swipe. Cada vez que llegas arriba, sumas y vuelves a empezar más rápido.',
+        win: 'No tiene final: suma un cruce cada vez que llegas arriba.',
+        lose: 'Tienes 3 vidas: pierdes una si te atropella un auto.',
+      },
+    },
+    create: (emit, size) => new Frogger(emit, size),
+  },
+  {
+    meta: {
+      id: 'defense',
+      name: 'Defensa',
+      emoji: '🛡️',
+      tagline: 'Intercepta los misiles',
+      controls: 'Clic / toque para explotar ahí',
+      help: {
+        rules: 'Llueven misiles hacia tu base. Cada toque crea una explosión que destruye los misiles que atrapa en su radio.',
+        howTo: 'Toca o haz clic donde quieres que estalle la explosión, anticipándote a la trayectoria de los misiles.',
+        win: 'No tiene final: suma puntos por cada misil interceptado mientras el ritmo sube.',
+        lose: 'Tienes 3 vidas: pierdes una cada vez que un misil llega a la base.',
+      },
+    },
+    create: (emit, size) => new Defense(emit, size),
+  },
+  {
+    meta: {
+      id: 'lightsout',
+      name: 'Apaga Luces',
+      emoji: '💡',
+      tagline: 'Apaga todas las luces a tiempo',
+      controls: 'Clic / toque para alternar',
+      help: {
+        rules: 'Tocar una casilla alterna esa luz y sus vecinas (arriba, abajo, izquierda, derecha). El objetivo es dejar todo el tablero apagado.',
+        howTo: 'Deduce el orden de toques para apagar todas las luces antes de que se acabe el tiempo. Resolver un tablero da más tiempo y sube de nivel.',
+        win: 'No tiene final: cada tablero resuelto suma un punto y el siguiente está más enredado.',
+        lose: 'Pierdes cuando se agota el tiempo.',
+      },
+    },
+    create: (emit, size) => new LightsOut(emit, size),
   },
 ]
 
