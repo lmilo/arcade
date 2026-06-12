@@ -23,6 +23,7 @@ export class Input {
   private down = new Set<string>()
   private dirQueue: Dir[] = []
   private actionQueued = false
+  private tapQueue: { x: number; y: number }[] = []
   private touchStart: { x: number; y: number } | null = null
   private target: HTMLElement | null = null
   private surface: HTMLElement | null = null
@@ -41,6 +42,7 @@ export class Input {
     target.addEventListener('touchend', this.onTouchEnd, { passive: false })
     target.addEventListener('touchmove', this.onTouchMove, { passive: false })
     target.addEventListener('mousemove', this.onMouseMove)
+    target.addEventListener('mousedown', this.onMouseDown)
   }
 
   detach() {
@@ -51,6 +53,7 @@ export class Input {
       this.target.removeEventListener('touchend', this.onTouchEnd)
       this.target.removeEventListener('touchmove', this.onTouchMove)
       this.target.removeEventListener('mousemove', this.onMouseMove)
+      this.target.removeEventListener('mousedown', this.onMouseDown)
     }
     this.target = null
     this.surface = null
@@ -75,6 +78,11 @@ export class Input {
       return true
     }
     return false
+  }
+
+  /** Próximo toque/clic como coordenadas normalizadas (0..1) sobre el canvas, o null. */
+  consumeTap(): { x: number; y: number } | null {
+    return this.tapQueue.shift() ?? null
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -107,6 +115,8 @@ export class Input {
 
     if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
       this.actionQueued = true
+      const pos = this.normPos(t.clientX, t.clientY)
+      if (pos) this.tapQueue.push(pos)
       return
     }
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -125,10 +135,27 @@ export class Input {
     this.updatePointer(e.clientX)
   }
 
+  private onMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0) return
+    this.actionQueued = true
+    const pos = this.normPos(e.clientX, e.clientY)
+    if (pos) this.tapQueue.push(pos)
+  }
+
   private updatePointer(clientX: number) {
     if (!this.surface) return
     const r = this.surface.getBoundingClientRect()
     if (r.width === 0) return
     this.pointer = Math.max(0, Math.min(1, (clientX - r.left) / r.width))
+  }
+
+  private normPos(clientX: number, clientY: number): { x: number; y: number } | null {
+    if (!this.surface) return null
+    const r = this.surface.getBoundingClientRect()
+    if (r.width === 0 || r.height === 0) return null
+    return {
+      x: Math.max(0, Math.min(1, (clientX - r.left) / r.width)),
+      y: Math.max(0, Math.min(1, (clientY - r.top) / r.height)),
+    }
   }
 }
