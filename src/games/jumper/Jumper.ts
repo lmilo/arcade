@@ -12,10 +12,16 @@ const GRAVITY = 1500
 const JUMP = -760
 const PLAT_W = 62
 const R = 16
+const SPRING_JUMP = JUMP * 1.55
+
+type PType = 'normal' | 'spring' | 'crumble'
 
 interface Platform {
   x: number
   y: number
+  type: PType
+  crumbling: boolean
+  fade: number
 }
 
 export class Jumper extends Game {
@@ -53,7 +59,7 @@ export class Jumper extends Game {
     this.alive = true
     this.started = false
     this.particles.clear()
-    this.platforms = [{ x: W / 2, y: H - 60 }]
+    this.platforms = [{ x: W / 2, y: H - 60, type: 'normal', crumbling: false, fade: 1 }]
     this.fill()
     this.emit({ type: 'score', value: 0 })
     this.emit({ type: 'state', state: 'ready' })
@@ -100,19 +106,29 @@ export class Jumper extends Game {
 
     if (this.vy > 0) {
       for (const p of this.platforms) {
+        if (p.crumbling) continue
         if (
           prevY + R <= p.y &&
           this.y + R >= p.y &&
           this.y + R <= p.y + 18 &&
           Math.abs(this.x - p.x) < PLAT_W / 2 + R * 0.4
         ) {
-          this.vy = JUMP
-          this.particles.burst(this.x, p.y, { count: 6, color: [PALETTE.success, '#fff'], speed: 90, life: 0.3, angle: Math.PI / 2, spread: 0.4 })
-          audio.play('bounce')
+          if (p.type === 'spring') {
+            this.vy = SPRING_JUMP
+            this.particles.burst(this.x, p.y, { count: 12, color: [PALETTE.accent2, '#fff'], speed: 150, life: 0.4, angle: Math.PI / 2, spread: 0.5 })
+            audio.play('powerup')
+          } else {
+            this.vy = JUMP
+            this.particles.burst(this.x, p.y, { count: 6, color: [PALETTE.success, '#fff'], speed: 90, life: 0.3, angle: Math.PI / 2, spread: 0.4 })
+            audio.play('bounce')
+          }
+          if (p.type === 'crumble') p.crumbling = true
           break
         }
       }
     }
+
+    for (const p of this.platforms) if (p.crumbling) p.fade -= dt * 2.2
 
     if (this.y < this.highest) {
       this.highest = this.y
@@ -124,7 +140,7 @@ export class Jumper extends Game {
     }
 
     if (this.y - this.cameraY < H * 0.42) this.cameraY = this.y - H * 0.42
-    this.platforms = this.platforms.filter((p) => p.y < this.cameraY + H + 40)
+    this.platforms = this.platforms.filter((p) => p.y < this.cameraY + H + 40 && (!p.crumbling || p.fade > 0))
     this.fill()
 
     if (this.y - this.cameraY > H + 30) {
@@ -144,11 +160,32 @@ export class Jumper extends Game {
 
     for (const p of this.platforms) {
       const sy = p.y - this.cameraY
-      ctx.fillStyle = PALETTE.success
+      ctx.globalAlpha = p.crumbling ? Math.max(0, p.fade) : 1
+      ctx.fillStyle = p.type === 'spring' ? PALETTE.accent2 : p.type === 'crumble' ? '#b45309' : PALETTE.success
       ctx.beginPath()
       ctx.roundRect(p.x - PLAT_W / 2, sy, PLAT_W, 12, 6)
       ctx.fill()
+      if (p.type === 'spring') {
+        // Resorte: flecha hacia arriba.
+        ctx.fillStyle = '#0f0f1a'
+        ctx.beginPath()
+        ctx.moveTo(p.x, sy - 7)
+        ctx.lineTo(p.x + 7, sy + 1)
+        ctx.lineTo(p.x - 7, sy + 1)
+        ctx.fill()
+      } else if (p.type === 'crumble') {
+        // Desvanecente: grietas.
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(p.x - 14, sy + 2)
+        ctx.lineTo(p.x - 6, sy + 10)
+        ctx.moveTo(p.x + 4, sy + 1)
+        ctx.lineTo(p.x + 12, sy + 11)
+        ctx.stroke()
+      }
     }
+    ctx.globalAlpha = 1
 
     const sy = this.y - this.cameraY
     ctx.fillStyle = PALETTE.accent
@@ -168,7 +205,9 @@ export class Jumper extends Game {
     let guard = 0
     while (topY > this.cameraY - 120 && guard < 200) {
       topY -= 52 + Math.random() * 46
-      this.platforms.push({ x: PLAT_W / 2 + Math.random() * (W - PLAT_W), y: topY })
+      const r = Math.random()
+      const type: PType = r < 0.12 ? 'spring' : r < 0.32 ? 'crumble' : 'normal'
+      this.platforms.push({ x: PLAT_W / 2 + Math.random() * (W - PLAT_W), y: topY, type, crumbling: false, fade: 1 })
       guard++
     }
   }

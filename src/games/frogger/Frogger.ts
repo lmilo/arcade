@@ -29,6 +29,7 @@ export class Frogger extends Game {
   private col = 5
   private row = ROWS - 1
   private lanes: Lane[] = []
+  private respawnTimer = 0
   private lives = 3
   private score = 0
   private alive = true
@@ -48,6 +49,7 @@ export class Frogger extends Game {
     this.score = 0
     this.alive = true
     this.started = false
+    this.respawnTimer = 0
     this.particles.clear()
     this.buildLanes()
     this.resetFrog()
@@ -78,6 +80,26 @@ export class Frogger extends Game {
       return
     }
 
+    // Los autos siempre avanzan.
+    const span = W
+    for (const lane of this.lanes) {
+      for (let i = 0; i < lane.cars.length; i++) {
+        lane.cars[i] += lane.speed * dt
+        if (lane.speed > 0 && lane.cars[i] > span) lane.cars[i] -= span + lane.carW
+        else if (lane.speed < 0 && lane.cars[i] < -lane.carW) lane.cars[i] += span + lane.carW
+      }
+    }
+
+    // Tras morir, una breve pausa: ignora el input para que un avance "spameado"
+    // no arrastre a la siguiente vida.
+    if (this.respawnTimer > 0) {
+      this.respawnTimer -= dt
+      while (input.nextDir() !== null) {
+        /* descarta movimientos en cola */
+      }
+      return
+    }
+
     let d: Dir | null
     while ((d = input.nextDir()) !== null) {
       if (d === 'up') this.row = Math.max(0, this.row - 1)
@@ -88,15 +110,6 @@ export class Frogger extends Game {
       if (this.row === 0) {
         this.crossed()
         return
-      }
-    }
-
-    const span = W
-    for (const lane of this.lanes) {
-      for (let i = 0; i < lane.cars.length; i++) {
-        lane.cars[i] += lane.speed * dt
-        if (lane.speed > 0 && lane.cars[i] > span) lane.cars[i] -= span + lane.carW
-        else if (lane.speed < 0 && lane.cars[i] < -lane.carW) lane.cars[i] += span + lane.carW
       }
     }
 
@@ -131,6 +144,8 @@ export class Frogger extends Game {
 
     const fx = this.col * CELL + CELL / 2
     const fy = this.row * CELL + CELL / 2
+    const blink = this.respawnTimer > 0 && Math.floor(this.respawnTimer * 10) % 2 === 0
+    ctx.globalAlpha = blink ? 0.35 : 1
     ctx.fillStyle = PALETTE.success
     ctx.beginPath()
     ctx.arc(fx, fy, CELL * 0.34, 0, Math.PI * 2)
@@ -140,6 +155,7 @@ export class Frogger extends Game {
     ctx.arc(fx - 5, fy - 4, 2.5, 0, Math.PI * 2)
     ctx.arc(fx + 5, fy - 4, 2.5, 0, Math.PI * 2)
     ctx.fill()
+    ctx.globalAlpha = 1
 
     for (let i = 0; i < this.lives; i++) {
       ctx.fillStyle = PALETTE.success
@@ -193,5 +209,6 @@ export class Frogger extends Game {
       return
     }
     this.resetFrog()
+    this.respawnTimer = 0.8
   }
 }

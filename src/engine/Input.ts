@@ -24,6 +24,8 @@ export class Input {
   private dirQueue: Dir[] = []
   private actionQueued = false
   private tapQueue: { x: number; y: number }[] = []
+  private secondaryTapQueue: { x: number; y: number }[] = []
+  private locked = false
   private touchStart: { x: number; y: number } | null = null
   private target: HTMLElement | null = null
   private surface: HTMLElement | null = null
@@ -43,6 +45,7 @@ export class Input {
     target.addEventListener('touchmove', this.onTouchMove, { passive: false })
     target.addEventListener('mousemove', this.onMouseMove)
     target.addEventListener('mousedown', this.onMouseDown)
+    target.addEventListener('contextmenu', this.onContextMenu)
   }
 
   detach() {
@@ -54,13 +57,27 @@ export class Input {
       this.target.removeEventListener('touchmove', this.onTouchMove)
       this.target.removeEventListener('mousemove', this.onMouseMove)
       this.target.removeEventListener('mousedown', this.onMouseDown)
+      this.target.removeEventListener('contextmenu', this.onContextMenu)
     }
     this.target = null
     this.surface = null
   }
 
   isDown(code: string) {
-    return this.down.has(code)
+    return this.locked ? false : this.down.has(code)
+  }
+
+  /** Bloquea la entrada (p. ej. en game-over) para evitar reinicios por un clic colado. */
+  setLocked(v: boolean) {
+    this.locked = v
+    this.clearPending()
+  }
+
+  clearPending() {
+    this.dirQueue.length = 0
+    this.tapQueue.length = 0
+    this.secondaryTapQueue.length = 0
+    this.actionQueued = false
   }
 
   /** X del puntero normalizada al ancho del canvas (0..1), o null si no hay puntero. */
@@ -69,10 +86,12 @@ export class Input {
   }
 
   nextDir(): Dir | null {
+    if (this.locked) return null
     return this.dirQueue.shift() ?? null
   }
 
   consumeAction(): boolean {
+    if (this.locked) return false
     if (this.actionQueued) {
       this.actionQueued = false
       return true
@@ -82,7 +101,14 @@ export class Input {
 
   /** Próximo toque/clic como coordenadas normalizadas (0..1) sobre el canvas, o null. */
   consumeTap(): { x: number; y: number } | null {
+    if (this.locked) return null
     return this.tapQueue.shift() ?? null
+  }
+
+  /** Próximo clic derecho (o equivalente) como coordenadas normalizadas, o null. */
+  consumeSecondaryTap(): { x: number; y: number } | null {
+    if (this.locked) return null
+    return this.secondaryTapQueue.shift() ?? null
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -140,6 +166,12 @@ export class Input {
     this.actionQueued = true
     const pos = this.normPos(e.clientX, e.clientY)
     if (pos) this.tapQueue.push(pos)
+  }
+
+  private onContextMenu = (e: MouseEvent) => {
+    e.preventDefault()
+    const pos = this.normPos(e.clientX, e.clientY)
+    if (pos) this.secondaryTapQueue.push(pos)
   }
 
   private updatePointer(clientX: number) {

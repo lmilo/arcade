@@ -46,6 +46,7 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
   const [muted, setMuted] = useState(audio.muted)
   const [best, setBest] = useState(() => store.getBest(entry.meta.id))
   const [newBest, setNewBest] = useState(false)
+  const [won, setWon] = useState(false)
   const [toasts, setToasts] = useState<Achievement[]>([])
   const [copied, setCopied] = useState(false)
 
@@ -67,6 +68,7 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
         }
       } else if (e.type === 'gameover') {
         setFinalScore(e.score)
+        setWon(e.won ?? false)
         const res = store.recordScore(entry.meta.id, e.score)
         setBest(res.best)
         setNewBest(res.isBest)
@@ -76,17 +78,22 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
         if (e.state === 'playing') {
           setPhase('playing')
           setNewBest(false)
+          setWon(false)
           beatenRef.current = false
+          input.setLocked(false)
         } else {
           setPhase(e.state === 'over' ? 'over' : 'ready')
+          input.setLocked(e.state === 'over')
         }
       }
     }
 
+    // input se crea antes del juego: el constructor del juego emite 'ready',
+    // y el handler emit referencia input.
+    const input = new Input()
     const game = entry.create(emit, size)
     gameRef.current = game
     const renderer = new Renderer(canvas, game.width, game.height)
-    const input = new Input()
     input.attach(wrap, canvas)
     game.init()
 
@@ -224,7 +231,9 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
 
           {phase === 'over' && (
             <div className="overlay">
-              <h2 className="overlay-title">Game Over</h2>
+              <h2 className="overlay-title" style={won ? { color: '#22c55e' } : undefined}>
+                {won ? '¡Ganaste! 🎉' : 'Game Over'}
+              </h2>
               {newBest && <p className="new-best">🎉 ¡Nuevo récord!</p>}
               <p className="final-score">
                 Puntuación: <strong>{finalScore}</strong>

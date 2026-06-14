@@ -6,17 +6,19 @@ import { PALETTE } from '../../shared/theme'
 import { audio } from '../../engine/Audio'
 import { Particles } from '../../engine/Particles'
 
-const N = 5
-const CELL = 62
 const GAP = 8
 const PAD = 14
 const HUD_TOP = 50
+const TARGET = 330
 const START_TIME = 25
 const SOLVE_BONUS = 8
+const N_BY_SIZE: Record<BoardSize, number> = { small: 4, normal: 5, large: 6 }
 
 export class LightsOut extends Game {
-  readonly width = PAD * 2 + N * CELL + (N - 1) * GAP
-  readonly height = HUD_TOP + PAD + N * CELL + (N - 1) * GAP
+  readonly width: number
+  readonly height: number
+  private readonly n: number
+  private readonly cell: number
 
   private grid: boolean[] = []
   private timeLeft = START_TIME
@@ -27,9 +29,13 @@ export class LightsOut extends Game {
 
   private readonly particles = new Particles()
 
-  constructor(emit: Emit, _size: BoardSize) {
+  constructor(emit: Emit, size: BoardSize) {
     super(emit)
-    void _size
+    this.n = N_BY_SIZE[size]
+    this.cell = (TARGET - (this.n - 1) * GAP) / this.n
+    const span = this.n * this.cell + (this.n - 1) * GAP
+    this.width = PAD * 2 + span
+    this.height = HUD_TOP + PAD + span
     this.reset()
   }
 
@@ -55,14 +61,7 @@ export class LightsOut extends Game {
   update(dt: number, input: Input) {
     this.particles.update(dt)
 
-    if (!this.alive) {
-      if (input.consumeAction()) {
-        this.reset()
-        this.start()
-      }
-      input.consumeTap()
-      return
-    }
+    if (!this.alive) return
     if (!this.started) {
       if (input.consumeAction()) this.start()
       input.consumeTap()
@@ -99,17 +98,17 @@ export class LightsOut extends Game {
     ctx.roundRect(PAD, 30, (this.width - PAD * 2) * (this.timeLeft / START_TIME), 10, 5)
     ctx.fill()
 
-    for (let i = 0; i < N * N; i++) {
-      const x = PAD + (i % N) * (CELL + GAP)
-      const y = HUD_TOP + Math.floor(i / N) * (CELL + GAP)
+    for (let i = 0; i < this.n * this.n; i++) {
+      const x = PAD + (i % this.n) * (this.cell + GAP)
+      const y = HUD_TOP + Math.floor(i / this.n) * (this.cell + GAP)
       ctx.fillStyle = this.grid[i] ? PALETTE.warning : '#23232f'
       ctx.beginPath()
-      ctx.roundRect(x, y, CELL, CELL, 12)
+      ctx.roundRect(x, y, this.cell, this.cell, 12)
       ctx.fill()
       if (this.grid[i]) {
         ctx.fillStyle = 'rgba(255,255,255,0.25)'
         ctx.beginPath()
-        ctx.arc(x + CELL / 2, y + CELL / 2, CELL * 0.18, 0, Math.PI * 2)
+        ctx.arc(x + this.cell / 2, y + this.cell / 2, this.cell * 0.18, 0, Math.PI * 2)
         ctx.fill()
       }
     }
@@ -122,19 +121,20 @@ export class LightsOut extends Game {
   private handleTap(nx: number, ny: number) {
     const px = nx * this.width
     const py = ny * this.height
-    const col = Math.floor((px - PAD) / (CELL + GAP))
-    const row = Math.floor((py - HUD_TOP) / (CELL + GAP))
-    if (col < 0 || col >= N || row < 0 || row >= N || py < HUD_TOP) return
-    this.toggle(row * N + col)
+    if (py < HUD_TOP) return
+    const col = Math.floor((px - PAD) / (this.cell + GAP))
+    const row = Math.floor((py - HUD_TOP) / (this.cell + GAP))
+    if (col < 0 || col >= this.n || row < 0 || row >= this.n) return
+    this.toggle(row * this.n + col)
     audio.play('move')
     if (this.grid.every((v) => !v)) this.solved()
   }
 
   private toggle(i: number) {
-    const r = Math.floor(i / N)
-    const c = i % N
+    const r = Math.floor(i / this.n)
+    const c = i % this.n
     const flip = (rr: number, cc: number) => {
-      if (rr >= 0 && rr < N && cc >= 0 && cc < N) this.grid[rr * N + cc] = !this.grid[rr * N + cc]
+      if (rr >= 0 && rr < this.n && cc >= 0 && cc < this.n) this.grid[rr * this.n + cc] = !this.grid[rr * this.n + cc]
     }
     flip(r, c)
     flip(r - 1, c)
@@ -144,10 +144,10 @@ export class LightsOut extends Game {
   }
 
   private scramble() {
-    this.grid = Array(N * N).fill(false)
+    this.grid = Array(this.n * this.n).fill(false)
     const moves = 3 + this.level
-    for (let k = 0; k < moves; k++) this.toggle(Math.floor(Math.random() * N * N))
-    if (this.grid.every((v) => !v)) this.toggle(Math.floor(Math.random() * N * N))
+    for (let k = 0; k < moves; k++) this.toggle(Math.floor(Math.random() * this.n * this.n))
+    if (this.grid.every((v) => !v)) this.toggle(Math.floor(Math.random() * this.n * this.n))
   }
 
   private solved() {

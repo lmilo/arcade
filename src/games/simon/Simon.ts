@@ -152,24 +152,29 @@ export class Simon extends Game {
 
   private press(q: number) {
     if (q < 0) return
-    this.lit = q
-    this.flashTimer = PRESS_DUR
-    audio.play(QUAD_SFX[q])
 
-    if (q === this.seq[this.inputIdx]) {
-      this.inputIdx++
-      if (this.inputIdx === this.seq.length) {
-        this.score += 1
-        this.emit({ type: 'score', value: this.score })
-        this.seq.push(Math.floor(Math.random() * 4))
-        this.beginShow()
-      }
-    } else {
+    if (q !== this.seq[this.inputIdx]) {
+      this.lit = q
       this.alive = false
       audio.play('die')
       this.emit({ type: 'gameover', score: this.score })
       this.emit({ type: 'state', state: 'over' })
+      return
     }
+
+    this.inputIdx++
+    if (this.inputIdx === this.seq.length) {
+      // Último acierto: no se ilumina, Simon retoma el mando y muestra la nueva secuencia.
+      this.score += 1
+      this.emit({ type: 'score', value: this.score })
+      this.seq.push(Math.floor(Math.random() * 4))
+      this.beginShow()
+      return
+    }
+    // Acierto intermedio: feedback breve.
+    this.lit = q
+    this.flashTimer = PRESS_DUR
+    audio.play(QUAD_SFX[q])
   }
 
   private quadAt(nx: number, ny: number): number {

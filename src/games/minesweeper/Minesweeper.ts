@@ -7,12 +7,16 @@ import { audio } from '../../engine/Audio'
 import { Particles } from '../../engine/Particles'
 import { Shake } from '../../engine/Camera'
 
-const GRID = 9
-const MINES = 10
-const CELL = 40
 const PAD = 10
 const HUD_TOP = 46
 const NUM_COLORS = ['', '#60a5fa', '#22c55e', '#ef4444', '#a855f7', '#fb923c', '#22d3ee', '#e2e8f0', '#94a3b8']
+const REVEAL_STEP = 0.1
+
+const DIFF: Record<BoardSize, { grid: number; mines: number; cell: number }> = {
+  small: { grid: 9, mines: 10, cell: 38 },
+  normal: { grid: 13, mines: 28, cell: 30 },
+  large: { grid: 16, mines: 45, cell: 26 },
+}
 
 interface Cell {
   mine: boolean
@@ -22,32 +26,46 @@ interface Cell {
 }
 
 export class Minesweeper extends Game {
-  readonly width = GRID * CELL + PAD * 2
-  readonly height = HUD_TOP + GRID * CELL + PAD
+  readonly width: number
+  readonly height: number
+  private readonly n: number
+  private readonly mines: number
+  private readonly cell: number
 
   private cells: Cell[] = []
   private placed = false
   private flagMode = false
   private revealedCount = 0
   private score = 0
+  private dying = false
+  private revealQueue: number[] = []
+  private revealTimer = 0
   private alive = true
   private started = false
 
   private readonly particles = new Particles()
   private readonly shake = new Shake(10)
 
-  constructor(emit: Emit, _size: BoardSize) {
+  constructor(emit: Emit, size: BoardSize) {
     super(emit)
-    void _size
+    const d = DIFF[size]
+    this.n = d.grid
+    this.mines = d.mines
+    this.cell = d.cell
+    this.width = this.n * this.cell + PAD * 2
+    this.height = HUD_TOP + this.n * this.cell + PAD
     this.reset()
   }
 
   reset() {
-    this.cells = Array.from({ length: GRID * GRID }, () => ({ mine: false, revealed: false, flagged: false, adj: 0 }))
+    this.cells = Array.from({ length: this.n * this.n }, () => ({ mine: false, revealed: false, flagged: false, adj: 0 }))
     this.placed = false
     this.flagMode = false
     this.revealedCount = 0
     this.score = 0
+    this.dying = false
+    this.revealQueue = []
+    this.revealTimer = 0
     this.alive = true
     this.started = false
     this.particles.clear()
@@ -66,67 +84,70 @@ export class Minesweeper extends Game {
     this.shake.update(dt)
     this.particles.update(dt)
 
-    if (!this.alive) {
-      if (input.consumeAction()) {
-        this.reset()
-        this.start()
-      }
-      input.consumeTap()
-      return
-    }
+    if (!this.alive) return
     if (!this.started) {
       if (input.consumeAction()) this.start()
       input.consumeTap()
       return
     }
 
+    if (this.dying) {
+      input.consumeTap()
+      input.consumeSecondaryTap()
+      this.revealTimer -= dt
+      if (this.revealTimer <= 0) this.revealNextMine()
+      return
+    }
+
     const tap = input.consumeTap()
-    if (tap) this.handleTap(tap.x, tap.y)
+    if (tap) this.handleReveal(tap.x, tap.y)
+    const sec = input.consumeSecondaryTap()
+    if (sec) this.toggleFlagAt(sec.x, sec.y)
   }
 
   render(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = PALETTE.bg
     ctx.fillRect(0, 0, this.width, this.height)
 
-    // HUD: toggle de bandera + minas restantes.
     ctx.fillStyle = this.flagMode ? PALETTE.warning : PALETTE.card
     ctx.beginPath()
-    ctx.roundRect(PAD, 8, 132, 30, 8)
+    ctx.roundRect(PAD, 8, 150, 30, 8)
     ctx.fill()
     ctx.fillStyle = this.flagMode ? '#0f0f1a' : PALETTE.text
     ctx.font = '700 13px system-ui, sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(`🚩 Bandera: ${this.flagMode ? 'ON' : 'OFF'}`, PAD + 10, 23)
+    ctx.fillText(`🚩 Modo bandera: ${this.flagMode ? 'ON' : 'OFF'}`, PAD + 10, 23)
 
     const flags = this.cells.filter((c) => c.flagged).length
     ctx.fillStyle = PALETTE.muted
     ctx.textAlign = 'right'
-    ctx.fillText(`💣 ${MINES - flags}`, this.width - PAD, 23)
+    ctx.fillText(`💣 ${this.mines - flags}`, this.width - PAD, 23)
 
     this.shake.begin(ctx)
     this.cells.forEach((c, i) => {
-      const x = PAD + (i % GRID) * CELL
-      const y = HUD_TOP + Math.floor(i / GRID) * CELL
+      const x = PAD + (i % this.n) * this.cell
+      const y = HUD_TOP + Math.floor(i / this.n) * this.cell
       ctx.fillStyle = c.revealed ? '#15151f' : '#2a2a3d'
       ctx.beginPath()
-      ctx.roundRect(x + 1, y + 1, CELL - 2, CELL - 2, 5)
+      ctx.roundRect(x + 1, y + 1, this.cell - 2, this.cell - 2, 5)
       ctx.fill()
 
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
+      const fs = this.cell * 0.45
       if (c.revealed) {
         if (c.mine) {
-          ctx.font = '20px system-ui'
-          ctx.fillText('💣', x + CELL / 2, y + CELL / 2 + 1)
+          ctx.font = `${this.cell * 0.5}px system-ui`
+          ctx.fillText('💣', x + this.cell / 2, y + this.cell / 2 + 1)
         } else if (c.adj > 0) {
           ctx.fillStyle = NUM_COLORS[c.adj]
-          ctx.font = '700 18px system-ui, sans-serif'
-          ctx.fillText(String(c.adj), x + CELL / 2, y + CELL / 2 + 1)
+          ctx.font = `700 ${fs}px system-ui, sans-serif`
+          ctx.fillText(String(c.adj), x + this.cell / 2, y + this.cell / 2 + 1)
         }
       } else if (c.flagged) {
-        ctx.font = '18px system-ui'
-        ctx.fillText('🚩', x + CELL / 2, y + CELL / 2 + 1)
+        ctx.font = `${this.cell * 0.45}px system-ui`
+        ctx.fillText('🚩', x + this.cell / 2, y + this.cell / 2 + 1)
       }
     })
     this.particles.render(ctx)
@@ -135,19 +156,25 @@ export class Minesweeper extends Game {
 
   // --- mecánica ---
 
-  private handleTap(nx: number, ny: number) {
+  private cellAt(nx: number, ny: number): number {
     const px = nx * this.width
     const py = ny * this.height
-    if (py < HUD_TOP) {
-      if (px >= PAD && px <= PAD + 132 && py >= 8 && py <= 38) this.flagMode = !this.flagMode
+    if (py < HUD_TOP) return -2 // zona HUD
+    const col = Math.floor((px - PAD) / this.cell)
+    const row = Math.floor((py - HUD_TOP) / this.cell)
+    if (col < 0 || col >= this.n || row < 0 || row >= this.n) return -1
+    return row * this.n + col
+  }
+
+  private handleReveal(nx: number, ny: number) {
+    const idx = this.cellAt(nx, ny)
+    if (idx === -2) {
+      const px = nx * this.width
+      if (px >= PAD && px <= PAD + 150) this.flagMode = !this.flagMode
       return
     }
-    const col = Math.floor((px - PAD) / CELL)
-    const row = Math.floor((py - HUD_TOP) / CELL)
-    if (col < 0 || col >= GRID || row < 0 || row >= GRID) return
-    const idx = row * GRID + col
+    if (idx < 0) return
     const cell = this.cells[idx]
-
     if (this.flagMode) {
       if (!cell.revealed) {
         cell.flagged = !cell.flagged
@@ -158,29 +185,37 @@ export class Minesweeper extends Game {
     if (cell.flagged || cell.revealed) return
 
     if (!this.placed) this.placeMines(idx)
-
     if (cell.mine) {
-      this.loseAt(idx)
+      this.beginDying(idx)
       return
     }
     this.flood(idx)
     audio.play('move')
     this.score = this.revealedCount
     this.emit({ type: 'score', value: this.score })
-    if (this.revealedCount === GRID * GRID - MINES) this.win()
+    if (this.revealedCount === this.n * this.n - this.mines) this.win()
+  }
+
+  private toggleFlagAt(nx: number, ny: number) {
+    const idx = this.cellAt(nx, ny)
+    if (idx < 0) return
+    const cell = this.cells[idx]
+    if (cell.revealed) return
+    cell.flagged = !cell.flagged
+    audio.play('move')
   }
 
   private placeMines(safe: number) {
     const forbidden = new Set([safe, ...this.neighbors(safe)])
     let placed = 0
-    while (placed < MINES) {
-      const i = Math.floor(Math.random() * GRID * GRID)
+    while (placed < this.mines) {
+      const i = Math.floor(Math.random() * this.n * this.n)
       if (forbidden.has(i) || this.cells[i].mine) continue
       this.cells[i].mine = true
       placed++
     }
     for (let i = 0; i < this.cells.length; i++) {
-      this.cells[i].adj = this.neighbors(i).filter((n) => this.cells[n].mine).length
+      this.cells[i].adj = this.neighbors(i).filter((nn) => this.cells[nn].mine).length
     }
     this.placed = true
   }
@@ -198,38 +233,64 @@ export class Minesweeper extends Game {
   }
 
   private neighbors(i: number): number[] {
-    const r = Math.floor(i / GRID)
-    const c = i % GRID
+    const r = Math.floor(i / this.n)
+    const c = i % this.n
     const out: number[] = []
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         if (dr === 0 && dc === 0) continue
         const nr = r + dr
         const nc = c + dc
-        if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID) out.push(nr * GRID + nc)
+        if (nr >= 0 && nr < this.n && nc >= 0 && nc < this.n) out.push(nr * this.n + nc)
       }
     }
     return out
   }
 
-  private loseAt(idx: number) {
-    for (const c of this.cells) if (c.mine) c.revealed = true
-    this.alive = false
-    this.shake.add(0.8)
-    const x = PAD + (idx % GRID) * CELL + CELL / 2
-    const y = HUD_TOP + Math.floor(idx / GRID) * CELL + CELL / 2
-    this.particles.burst(x, y, { count: 24, color: ['#ef4444', '#fb923c', '#ffffff'], speed: 200, life: 0.7 })
+  private beginDying(hit: number) {
+    this.dying = true
+    this.score = this.revealedCount
+    this.cells[hit].revealed = true
+    this.shake.add(0.7)
     audio.play('die')
-    this.emit({ type: 'gameover', score: this.score })
-    this.emit({ type: 'state', state: 'over' })
+    this.boom(hit)
+    // El resto de minas se revelan una a una.
+    this.revealQueue = this.cells
+      .map((c, i) => (c.mine && !c.revealed ? i : -1))
+      .filter((i) => i >= 0)
+    for (let i = this.revealQueue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[this.revealQueue[i], this.revealQueue[j]] = [this.revealQueue[j], this.revealQueue[i]]
+    }
+    this.revealTimer = REVEAL_STEP
+  }
+
+  private revealNextMine() {
+    const idx = this.revealQueue.shift()
+    if (idx === undefined) {
+      this.alive = false
+      this.emit({ type: 'gameover', score: this.score, won: false })
+      this.emit({ type: 'state', state: 'over' })
+      return
+    }
+    this.cells[idx].revealed = true
+    this.boom(idx)
+    audio.play('lock')
+    this.revealTimer = REVEAL_STEP
+  }
+
+  private boom(idx: number) {
+    const x = PAD + (idx % this.n) * this.cell + this.cell / 2
+    const y = HUD_TOP + Math.floor(idx / this.n) * this.cell + this.cell / 2
+    this.particles.burst(x, y, { count: 10, color: ['#ef4444', '#fb923c', '#ffffff'], speed: 150, life: 0.5 })
   }
 
   private win() {
-    this.score = (GRID * GRID - MINES) + 100
+    this.score = this.n * this.n - this.mines + 100
     this.alive = false
     audio.play('win')
     this.emit({ type: 'score', value: this.score })
-    this.emit({ type: 'gameover', score: this.score })
+    this.emit({ type: 'gameover', score: this.score, won: true })
     this.emit({ type: 'state', state: 'over' })
   }
 }

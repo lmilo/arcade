@@ -5,7 +5,7 @@ export type GameState = 'ready' | 'playing' | 'paused' | 'over'
 export type GameEvent =
   | { type: 'score'; value: number }
   | { type: 'state'; state: GameState }
-  | { type: 'gameover'; score: number }
+  | { type: 'gameover'; score: number; won?: boolean }
 
 export type Emit = (e: GameEvent) => void
 
