@@ -115,9 +115,9 @@ export const GAMES: GameEntry[] = [
       tagline: 'Un toque, no toques nada',
       controls: 'Espacio / clic / toque para aletear',
       help: {
-        rules: 'Un pájaro cae sin parar. Cada toque le da un impulso hacia arriba para esquivar las tuberías.',
+        rules: 'Un pájaro cae sin parar. Cada toque le da un impulso hacia arriba para esquivar las tuberías. Cuanto más avanzas, más rápido va y más estrechos son los huecos.',
         howTo: 'Pulsa Espacio, haz clic o toca la pantalla para aletear. Pasa entre los huecos de las tuberías.',
-        win: 'No tiene final: suma un punto por cada tubería que cruzas. El reto es aguantar lo máximo posible.',
+        win: 'No tiene final y se acelera de forma progresiva: suma un punto por cada tubería que cruzas. El reto es aguantar lo máximo posible.',
         lose: 'Pierdes si chocas con una tubería o caes al suelo.',
       },
     },
@@ -147,8 +147,8 @@ export const GAMES: GameEntry[] = [
       tagline: 'Duelo de paletas contra la IA',
       controls: 'Mouse / ← → mover la paleta',
       help: {
-        rules: 'Devuelves la bola con tu paleta (abajo). La IA defiende arriba. La bola acelera con cada punto.',
-        howTo: 'Mueve la paleta con el mouse, el dedo o ← →. El punto de la paleta donde golpeas cambia el ángulo.',
+        rules: 'Devuelves la bola con tu paleta (abajo). La IA defiende arriba. La bola acelera con cada punto. Aparecen poderes (círculos) en el campo: si la bola los toca, le complican la vida a la IA (le encogen la paleta, aceleran la bola o la ocultan en su mitad).',
+        howTo: 'Mueve la paleta con el mouse, el dedo o ← →. El punto de la paleta donde golpeas cambia el ángulo. Dirige la bola hacia los círculos para activar sus efectos.',
         win: 'Sumas un punto cada vez que la bola pasa a la IA. El reto es marcar el máximo antes de quedarte sin vidas.',
         lose: 'Tienes 3 vidas: pierdes una cada vez que la bola pasa tu paleta.',
       },

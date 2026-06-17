@@ -115,9 +115,13 @@ export class Frogger extends Game {
 
     const lane = this.lanes.find((l) => l.row === this.row)
     if (lane) {
-      const fx = this.col * CELL
+      // Hitbox al tamaño visual real de la rana (no la celda completa) y autos
+      // con un pequeño margen interno: choca cuando de verdad se solapan.
+      const fcx = this.col * CELL + CELL / 2
+      const fhw = CELL * 0.3
+      const inset = 5
       for (const cx of lane.cars) {
-        if (fx + CELL > cx && fx < cx + lane.carW) {
+        if (fcx + fhw > cx + inset && fcx - fhw < cx + lane.carW - inset) {
           this.hit()
           return
         }
@@ -174,11 +178,11 @@ export class Frogger extends Game {
     this.lanes = []
     for (let row = 1; row <= ROWS - 2; row++) {
       const dir = row % 2 === 0 ? 1 : -1
-      const speed = (55 + Math.random() * 45 + this.score * 6) * dir
-      const carW = CELL * (1.3 + Math.random() * 1.1)
-      const count = 2 + (row % 2)
+      const speed = (40 + Math.random() * 30 + this.score * 4) * dir
+      const carW = CELL * (1.2 + Math.random() * 0.8)
+      const count = 2
       const cars: number[] = []
-      for (let i = 0; i < count; i++) cars.push((W / count) * i + Math.random() * 40)
+      for (let i = 0; i < count; i++) cars.push((W / count) * i + Math.random() * 30)
       this.lanes.push({ row, speed, carW, color: CAR_COLORS[row % CAR_COLORS.length], cars })
     }
   }

@@ -14,14 +14,14 @@ const BIRD_R = 13
 const GRAVITY = 1500
 const FLAP = -430
 const PIPE_W = 64
-const GAP = 165
-const PIPE_SPEED = 155
-const SPAWN_INTERVAL = 1.5
+const BASE_GAP = 170
+const BASE_SPEED = 150
 const GROUND_H = 40
 
 interface Pipe {
   x: number
   gapY: number
+  gap: number
   passed: boolean
 }
 
@@ -32,7 +32,6 @@ export class Flappy extends Game {
   private birdY = H / 2
   private vy = 0
   private pipes: Pipe[] = []
-  private spawnTimer = 0
   private score = 0
   private time = 0
   private alive = true
@@ -51,7 +50,6 @@ export class Flappy extends Game {
     this.birdY = H / 2
     this.vy = 0
     this.pipes = []
-    this.spawnTimer = 0
     this.score = 0
     this.alive = true
     this.started = false
@@ -73,13 +71,7 @@ export class Flappy extends Game {
     this.shake.update(dt)
     this.particles.update(dt)
 
-    if (!this.alive) {
-      if (input.consumeAction()) {
-        this.reset()
-        this.start()
-      }
-      return
-    }
+    if (!this.alive) return
     if (!this.started) {
       if (input.consumeAction()) this.start()
       return
@@ -89,17 +81,15 @@ export class Flappy extends Game {
     this.vy += GRAVITY * dt
     this.birdY += this.vy * dt
 
-    this.spawnTimer += dt
-    if (this.spawnTimer >= SPAWN_INTERVAL) {
-      this.spawnTimer -= SPAWN_INTERVAL
-      const margin = 70
-      const range = H - GROUND_H - GAP - margin * 2
-      const gapY = margin + GAP / 2 + Math.random() * Math.max(0, range)
-      this.pipes.push({ x: W, gapY, passed: false })
-    }
+    // Espaciado por distancia: a más velocidad, las tuberías llegan más seguido,
+    // pero la separación horizontal se mantiene jugable (y baja un poco con el score).
+    const spacing = Math.max(165, 235 - this.score * 2)
+    const last = this.pipes[this.pipes.length - 1]
+    if (!last || last.x < W - spacing) this.spawn()
 
+    const speed = this.speed()
     for (const p of this.pipes) {
-      p.x -= PIPE_SPEED * dt
+      p.x -= speed * dt
       if (!p.passed && p.x + PIPE_W < BIRD_X) {
         p.passed = true
         this.score += 1
@@ -119,7 +109,7 @@ export class Flappy extends Game {
     }
     for (const p of this.pipes) {
       if (BIRD_X + BIRD_R > p.x && BIRD_X - BIRD_R < p.x + PIPE_W) {
-        if (this.birdY - BIRD_R < p.gapY - GAP / 2 || this.birdY + BIRD_R > p.gapY + GAP / 2) {
+        if (this.birdY - BIRD_R < p.gapY - p.gap / 2 || this.birdY + BIRD_R > p.gapY + p.gap / 2) {
           this.die()
           return
         }
@@ -136,17 +126,13 @@ export class Flappy extends Game {
 
     this.shake.begin(ctx)
 
-    for (const p of this.pipes) {
-      this.drawPipe(ctx, p)
-    }
+    for (const p of this.pipes) this.drawPipe(ctx, p)
 
-    // Suelo.
     ctx.fillStyle = '#1e293b'
     ctx.fillRect(0, H - GROUND_H, W, GROUND_H)
     ctx.fillStyle = PALETTE.accent
     ctx.fillRect(0, H - GROUND_H, W, 3)
 
-    // Pájaro.
     const angle = Math.max(-0.4, Math.min(1.3, this.vy / 700))
     ctx.save()
     ctx.translate(BIRD_X, this.birdY)
@@ -169,6 +155,20 @@ export class Flappy extends Game {
 
     this.particles.render(ctx)
     this.shake.end(ctx)
+  }
+
+  // --- mecánica ---
+
+  private speed(): number {
+    return Math.min(330, BASE_SPEED + this.score * 6)
+  }
+
+  private spawn() {
+    const gap = Math.max(118, BASE_GAP - this.score * 1.6)
+    const margin = 60
+    const range = H - GROUND_H - gap - margin * 2
+    const gapY = margin + gap / 2 + Math.random() * Math.max(0, range)
+    this.pipes.push({ x: W, gapY, gap, passed: false })
   }
 
   private flap() {
@@ -200,8 +200,8 @@ export class Flappy extends Game {
   }
 
   private drawPipe(ctx: CanvasRenderingContext2D, p: Pipe) {
-    const topH = p.gapY - GAP / 2
-    const botY = p.gapY + GAP / 2
+    const topH = p.gapY - p.gap / 2
+    const botY = p.gapY + p.gap / 2
     ctx.fillStyle = PALETTE.success
     ctx.fillRect(p.x, 0, PIPE_W, topH)
     ctx.fillRect(p.x, botY, PIPE_W, H - GROUND_H - botY)
