@@ -80,6 +80,22 @@ export async function fetchMyProfile(): Promise<CloudProfile | null> {
   return { name: data.name, avatar: data.avatar }
 }
 
+export interface SetProfileResult {
+  ok: boolean
+  error?: string
+}
+
+/** Fija nombre (único) + avatar de la cuenta. Devuelve error en español si el nombre está tomado. */
+export async function setProfile(name: string, avatar: string): Promise<SetProfileResult> {
+  if (!supabase) return { ok: false, error: 'Sin conexión.' }
+  const { error } = await supabase.rpc('set_profile', { p_name: name, p_avatar: avatar })
+  if (!error) return { ok: true }
+  const m = (error.message ?? '').toUpperCase()
+  if (m.includes('NOMBRE_EN_USO')) return { ok: false, error: 'Ese nombre ya está en uso. Elige otro.' }
+  if (m.includes('NOMBRE_LARGO')) return { ok: false, error: 'El nombre debe tener entre 2 y 16 caracteres.' }
+  return { ok: false, error: 'No se pudo guardar tu identidad.' }
+}
+
 export async function upsertMyProfile(profile: CloudProfile): Promise<void> {
   if (!supabase) return
   const { data: sessionData } = await supabase.auth.getSession()

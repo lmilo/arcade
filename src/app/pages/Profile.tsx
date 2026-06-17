@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GAMES } from '../../games/registry'
 import { store } from '../../data/store'
+import { AVATARS } from '../../data/model'
 import { ACHIEVEMENTS } from '../../data/achievements'
 import { isOnline } from '../../data/supabase'
 import { signIn, signUp, signOut } from '../../data/auth'
-import { fetchMyProfile, upsertMyProfile } from '../../data/leaderboard'
+import { fetchMyProfile, setProfile } from '../../data/leaderboard'
 import { useSession } from '../useSession'
 
 export function Profile() {
@@ -20,20 +21,50 @@ export function Profile() {
   const [authMsg, setAuthMsg] = useState<string | null>(null)
   const [msgType, setMsgType] = useState<'error' | 'info'>('error')
   const [busy, setBusy] = useState(false)
+  const [needsName, setNeedsName] = useState(false)
 
-  // Al iniciar sesión: si ya hay perfil en la nube, se refleja localmente; si no, se sube el local.
+  // Al iniciar sesión: trae el perfil. Si el nombre sigue siendo el placeholder,
+  // hay que elegir identidad (una vez); si ya está elegido, se refleja localmente.
   useEffect(() => {
-    if (!session) return
+    if (!session) {
+      setNeedsName(false)
+      return
+    }
     fetchMyProfile().then((cloud) => {
-      if (cloud) {
-        setName(cloud.name)
-        setAvatar(cloud.avatar)
-        store.updateProfile({ name: cloud.name, avatar: cloud.avatar })
+      const cur = cloud ?? { name: 'Jugador-', avatar: '🕹️' }
+      const pending = cur.name.startsWith('Jugador-')
+      setNeedsName(pending)
+      setAvatar(cur.avatar)
+      if (pending) {
+        setName('')
+        setAuthMsg(null)
       } else {
-        upsertMyProfile({ name: store.getProfile().name, avatar: store.getProfile().avatar })
+        setName(cur.name)
+        store.updateProfile({ name: cur.name, avatar: cur.avatar })
       }
     })
   }, [session])
+
+  const saveIdentity = async () => {
+    const n = name.trim()
+    if (n.length < 2 || n.length > 16) {
+      setMsgType('error')
+      setAuthMsg('El nombre debe tener entre 2 y 16 caracteres.')
+      return
+    }
+    setBusy(true)
+    setAuthMsg(null)
+    const r = await setProfile(n, avatar)
+    setBusy(false)
+    if (!r.ok) {
+      setMsgType('error')
+      setAuthMsg(r.error ?? 'No se pudo guardar.')
+    } else {
+      store.updateProfile({ name: n, avatar })
+      setName(n)
+      setNeedsName(false)
+    }
+  }
 
   const fail = (m: string) => {
     setMsgType('error')
@@ -110,12 +141,40 @@ export function Profile() {
           </section>
         )}
 
-        {session && (
-          <section className="profile-card">
-            <div className="profile-avatar">{avatar}</div>
-            <span className="profile-name-readonly">{name}</span>
-          </section>
-        )}
+        {session &&
+          (needsName ? (
+            <section className="profile-card">
+              <h3 className="section-title">Elige tu identidad (una sola vez)</h3>
+              <div className="profile-avatar">{avatar}</div>
+              <input
+                className="name-input"
+                value={name}
+                maxLength={16}
+                placeholder="Tu nombre (único)"
+                onChange={(e) => setName(e.target.value)}
+              />
+              <div className="avatar-grid">
+                {AVATARS.map((a) => (
+                  <button
+                    key={a}
+                    className={a === avatar ? 'avatar-opt active' : 'avatar-opt'}
+                    onClick={() => setAvatar(a)}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+              {authMsg && <p className={msgType === 'error' ? 'account-msg error' : 'account-msg info'}>{authMsg}</p>}
+              <button className="btn-primary" disabled={busy} onClick={() => void saveIdentity()}>
+                Guardar
+              </button>
+            </section>
+          ) : (
+            <section className="profile-card">
+              <div className="profile-avatar">{avatar}</div>
+              <span className="profile-name-readonly">{name}</span>
+            </section>
+          ))}
 
         <section>
           <h3 className="section-title">Tus marcas</h3>

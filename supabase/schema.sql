@@ -9,6 +9,9 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Nombre único entre jugadores, sin distinguir mayúsculas/acentos de caja.
+create unique index if not exists profiles_name_lower_key on public.profiles (lower(name));
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "perfiles visibles para todos" on public.profiles;
@@ -24,8 +27,9 @@ create policy "edita tu propio perfil"
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  -- Placeholder único (basado en el uid); el jugador elige su nombre real al registrarse.
   insert into public.profiles (id, name)
-  values (new.id, split_part(new.email, '@', 1))
+  values (new.id, 'Jugador-' || left(translate(new.id::text, '-', ''), 8))
   on conflict (id) do nothing;
   return new;
 end;
@@ -112,4 +116,31 @@ language sql stable security definer set search_path = public as $$
   from public.scores s
   left join public.profiles p on p.id = s.user_id
   where s.game_id = p_game and s.user_id = auth.uid();
+$$;
+
+-- Fija nombre + avatar del usuario actual (una vez, al registrarse). Nombre único.
+create or replace function public.set_profile(p_name text, p_avatar text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_name text := btrim(p_name);
+begin
+  if auth.uid() is null then
+    raise exception 'no autenticado';
+  end if;
+  if char_length(v_name) < 2 or char_length(v_name) > 16 then
+    raise exception 'NOMBRE_LARGO';
+  end if;
+  if exists (
+    select 1 from public.profiles
+    where lower(name) = lower(v_name) and id <> auth.uid()
+  ) then
+    raise exception 'NOMBRE_EN_USO';
+  end if;
+
+  update public.profiles
+     set name = v_name,
+         avatar = coalesce(nullif(p_avatar, ''), avatar),
+         updated_at = now()
+   where id = auth.uid();
+end;
 $$;
