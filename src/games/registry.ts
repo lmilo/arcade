@@ -147,8 +147,8 @@ export const GAMES: GameEntry[] = [
       tagline: 'Duelo de paletas contra la IA',
       controls: 'Mouse / ← → mover la paleta',
       help: {
-        rules: 'Devuelves la bola con tu paleta (abajo). La IA defiende arriba. La bola acelera con cada punto. Aparecen poderes (círculos) en el campo: si la bola los toca, le complican la vida a la IA (le encogen la paleta, aceleran la bola o la ocultan en su mitad).',
-        howTo: 'Mueve la paleta con el mouse, el dedo o ← →. El punto de la paleta donde golpeas cambia el ángulo. Dirige la bola hacia los círculos para activar sus efectos.',
+        rules: 'Devuelves la bola con tu paleta (abajo). La IA defiende arriba. La bola acelera con cada punto. Aparecen poderes (círculos) en el campo y el efecto va contra quien recibe: si tú mandas la bola al círculo, castiga a la IA; si la manda la IA, te castiga a ti (encoge la paleta, acelera la bola u oculta la bola en esa mitad). El efecto se corta al cerrar el punto.',
+        howTo: 'Mueve la paleta con el mouse, el dedo o ← →. El punto de la paleta donde golpeas cambia el ángulo. Dirige la bola hacia los círculos para activar sus efectos a tu favor.',
         win: 'Sumas un punto cada vez que la bola pasa a la IA. El reto es marcar el máximo antes de quedarte sin vidas.',
         lose: 'Tienes 3 vidas: pierdes una cada vez que la bola pasa tu paleta.',
       },

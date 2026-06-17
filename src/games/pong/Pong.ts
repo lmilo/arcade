@@ -20,6 +20,7 @@ const POWER_SPAWN = 6.5
 const POWER_LIFE = 6
 const EFFECT_DUR = 6
 
+type Side = 'player' | 'ai'
 type PowerKind = 'shrink' | 'fast' | 'blind'
 const POWER_STYLE: Record<PowerKind, { color: string; label: string }> = {
   shrink: { color: '#ef4444', label: '⇲' },
@@ -56,6 +57,9 @@ export class Pong extends Game {
   private shrinkTimer = 0
   private fastTimer = 0
   private blindTimer = 0
+  // 'against the opponent of who sent the ball into the power'.
+  private shrinkTarget: Side = 'ai'
+  private blindTarget: Side = 'ai'
 
   private readonly particles = new Particles()
   private readonly shake = new Shake(10)
@@ -104,11 +108,12 @@ export class Pong extends Game {
       return
     }
 
+    const pw = this.playerWidth()
     const pointer = input.pointerX()
     if (pointer !== null) this.playerX = pointer * W
     if (input.isDown('ArrowLeft') || input.isDown('KeyA')) this.playerX -= 380 * dt
     if (input.isDown('ArrowRight') || input.isDown('KeyD')) this.playerX += 380 * dt
-    this.playerX = Math.max(PADDLE_W / 2, Math.min(W - PADDLE_W / 2, this.playerX))
+    this.playerX = Math.max(pw / 2, Math.min(W - pw / 2, this.playerX))
 
     const aiW = this.aiWidth()
     const aiSpeed = 190 + this.score * 8
@@ -158,7 +163,7 @@ export class Pong extends Game {
       audio.play('bounce')
     }
 
-    this.paddleBounce(this.playerX, PLAYER_Y, PADDLE_W, true)
+    this.paddleBounce(this.playerX, PLAYER_Y, pw, true)
     this.paddleBounce(this.aiX, AI_Y, aiW, false)
     this.collectPowers()
 
@@ -197,17 +202,20 @@ export class Pong extends Game {
     }
 
     const aiW = this.aiWidth()
+    const pw = this.playerWidth()
     ctx.fillStyle = PALETTE.accent
     ctx.beginPath()
-    ctx.roundRect(this.playerX - PADDLE_W / 2, PLAYER_Y - PADDLE_H / 2, PADDLE_W, PADDLE_H, 6)
+    ctx.roundRect(this.playerX - pw / 2, PLAYER_Y - PADDLE_H / 2, pw, PADDLE_H, 6)
     ctx.fill()
     ctx.fillStyle = PALETTE.danger
     ctx.beginPath()
     ctx.roundRect(this.aiX - aiW / 2, AI_Y - PADDLE_H / 2, aiW, PADDLE_H, 6)
     ctx.fill()
 
-    // Bola: se desvanece en la mitad de la IA con el poder 'blind'.
-    const faint = this.blindTimer > 0 && this.ballY < H / 2
+    // Bola: se desvanece en la mitad del lado castigado por el poder 'blind'.
+    const faint =
+      this.blindTimer > 0 &&
+      ((this.blindTarget === 'ai' && this.ballY < H / 2) || (this.blindTarget === 'player' && this.ballY > H / 2))
     ctx.globalAlpha = faint ? 0.12 : 1
     ctx.fillStyle = '#ffffff'
     ctx.beginPath()
@@ -234,13 +242,20 @@ export class Pong extends Game {
   }
 
   private aiWidth() {
-    return this.shrinkTimer > 0 ? PADDLE_W * 0.5 : PADDLE_W
+    return this.shrinkTimer > 0 && this.shrinkTarget === 'ai' ? PADDLE_W * 0.5 : PADDLE_W
+  }
+
+  private playerWidth() {
+    return this.shrinkTimer > 0 && this.shrinkTarget === 'player' ? PADDLE_W * 0.5 : PADDLE_W
   }
 
   private collectPowers() {
+    // Quien "envía" la bola hacia el círculo es el dueño del poder; el efecto va
+    // contra su rival. Bola subiendo (vy<0) la mandó el jugador; bajando, la IA.
+    const owner: Side = this.ballVY < 0 ? 'player' : 'ai'
     for (const p of this.powers) {
       if (Math.hypot(p.x - this.ballX, p.y - this.ballY) < POWER_R + BALL_R) {
-        this.activate(p.kind)
+        this.activate(p.kind, owner)
         p.life = 0
         this.particles.burst(p.x, p.y, { count: 12, color: [POWER_STYLE[p.kind].color, '#fff'], speed: 150, life: 0.5 })
         audio.play('powerup')
@@ -249,10 +264,17 @@ export class Pong extends Game {
     this.powers = this.powers.filter((p) => p.life > 0)
   }
 
-  private activate(kind: PowerKind) {
-    if (kind === 'shrink') this.shrinkTimer = EFFECT_DUR
-    else if (kind === 'fast') this.fastTimer = EFFECT_DUR
-    else this.blindTimer = EFFECT_DUR
+  private activate(kind: PowerKind, owner: Side) {
+    const target: Side = owner === 'player' ? 'ai' : 'player'
+    if (kind === 'fast') {
+      this.fastTimer = EFFECT_DUR
+    } else if (kind === 'shrink') {
+      this.shrinkTimer = EFFECT_DUR
+      this.shrinkTarget = target
+    } else {
+      this.blindTimer = EFFECT_DUR
+      this.blindTarget = target
+    }
   }
 
   private center(delay: number) {
@@ -261,6 +283,10 @@ export class Pong extends Game {
     this.ballVX = 0
     this.ballVY = 0
     this.serveTimer = delay
+    // Al cerrar el punto, se limpian los efectos activos de los poderes.
+    this.shrinkTimer = 0
+    this.fastTimer = 0
+    this.blindTimer = 0
   }
 
   private launch() {
