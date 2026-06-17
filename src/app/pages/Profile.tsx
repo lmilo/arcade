@@ -31,8 +31,8 @@ export function Profile() {
       return
     }
     fetchMyProfile().then((cloud) => {
-      const cur = cloud ?? { name: 'Jugador-', avatar: '🕹️' }
-      const pending = cur.name.startsWith('Jugador-')
+      const cur = cloud ?? { name: '', avatar: '🕹️', nameSet: false }
+      const pending = !cur.nameSet
       setNeedsName(pending)
       setAvatar(cur.avatar)
       if (pending) {

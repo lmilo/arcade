@@ -17,6 +17,7 @@ export interface Leaderboard {
 export interface CloudProfile {
   name: string
   avatar: string
+  nameSet: boolean
 }
 
 /**
@@ -75,9 +76,9 @@ export async function fetchMyProfile(): Promise<CloudProfile | null> {
   const { data: sessionData } = await supabase.auth.getSession()
   const uid = sessionData.session?.user.id
   if (!uid) return null
-  const { data, error } = await supabase.from('profiles').select('name, avatar').eq('id', uid).single()
+  const { data, error } = await supabase.from('profiles').select('name, avatar, name_set').eq('id', uid).single()
   if (error || !data) return null
-  return { name: data.name, avatar: data.avatar }
+  return { name: data.name, avatar: data.avatar, nameSet: data.name_set }
 }
 
 export interface SetProfileResult {
@@ -94,14 +95,6 @@ export async function setProfile(name: string, avatar: string): Promise<SetProfi
   if (m.includes('NOMBRE_EN_USO')) return { ok: false, error: 'Ese nombre ya está en uso. Elige otro.' }
   if (m.includes('NOMBRE_LARGO')) return { ok: false, error: 'El nombre debe tener entre 2 y 16 caracteres.' }
   return { ok: false, error: 'No se pudo guardar tu identidad.' }
-}
-
-export async function upsertMyProfile(profile: CloudProfile): Promise<void> {
-  if (!supabase) return
-  const { data: sessionData } = await supabase.auth.getSession()
-  const uid = sessionData.session?.user.id
-  if (!uid) return
-  await supabase.from('profiles').upsert({ id: uid, name: profile.name, avatar: profile.avatar, updated_at: new Date().toISOString() })
 }
 
 interface LeaderRow {

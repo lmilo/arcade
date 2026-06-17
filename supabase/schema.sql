@@ -6,8 +6,12 @@ create table if not exists public.profiles (
   id         uuid primary key references auth.users on delete cascade,
   name       text not null default 'Jugador',
   avatar     text not null default '🕹️',
+  name_set   boolean not null default false,
   updated_at timestamptz not null default now()
 );
+
+-- Para instalaciones previas: añade la bandera si no existe.
+alter table public.profiles add column if not exists name_set boolean not null default false;
 
 -- Nombre único entre jugadores, sin distinguir mayúsculas/acentos de caja.
 create unique index if not exists profiles_name_lower_key on public.profiles (lower(name));
@@ -140,6 +144,7 @@ begin
   update public.profiles
      set name = v_name,
          avatar = coalesce(nullif(p_avatar, ''), avatar),
+         name_set = true,
          updated_at = now()
    where id = auth.uid();
 end;
