@@ -430,16 +430,13 @@ canvas {
 }
 
 .toasts {
-  position: absolute;
-  top: 14px;
+  position: fixed;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  z-index: 100;
   width: max-content;
-  max-width: 90%;
+  max-width: 92%;
 }
 
 .toast {
@@ -478,6 +475,29 @@ canvas {
 .toast-desc {
   font-size: 12px;
   color: var(--muted);
+}
+
+.toast-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.toast-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.toast-close:hover {
+  color: var(--text);
 }
 
 /* Header del menú */

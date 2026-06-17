@@ -128,9 +128,10 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
     pausedRef.current = showHelp
   }, [showHelp])
 
+  // Cola de logros: se muestra solo el primero y va avanzando uno a uno.
   useEffect(() => {
     if (toasts.length === 0) return
-    const t = setTimeout(() => setToasts([]), 3500)
+    const t = setTimeout(() => setToasts((q) => q.slice(1)), 3200)
     return () => clearTimeout(t)
   }, [toasts])
 
@@ -198,15 +199,17 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
     <div className="game-host">
       {toasts.length > 0 && (
         <div className="toasts">
-          {toasts.map((a) => (
-            <div key={a.id} className="toast">
-              <span className="toast-icon">{a.icon}</span>
-              <span className="toast-body">
-                <span className="toast-title">¡Logro! {a.name}</span>
-                <span className="toast-desc">{a.desc}</span>
-              </span>
-            </div>
-          ))}
+          <div key={toasts[0].id} className="toast">
+            <span className="toast-icon">{toasts[0].icon}</span>
+            <span className="toast-body">
+              <span className="toast-title">¡Logro! {toasts[0].name}</span>
+              <span className="toast-desc">{toasts[0].desc}</span>
+            </span>
+            {toasts.length > 1 && <span className="toast-count">+{toasts.length - 1}</span>}
+            <button className="toast-close" onClick={() => setToasts((q) => q.slice(1))} aria-label="Cerrar">
+              ×
+            </button>
+          </div>
         </div>
       )}
       <div className="stage">
