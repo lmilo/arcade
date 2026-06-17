@@ -115,6 +115,9 @@ export class Input {
     const dir = KEY_TO_DIR[e.code]
     if (dir) {
       this.dirQueue.push(dir)
+      // El teclado toma el control del movimiento: el puntero deja de mandar
+      // hasta que se vuelva a mover el mouse/dedo (evita que el mouse lo "pise").
+      this.pointer = null
       e.preventDefault()
     } else if (ACTION_KEYS.has(e.code)) {
       this.actionQueued = true
