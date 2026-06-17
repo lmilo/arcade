@@ -1,4 +1,8 @@
-# Arcade API (Fase 3)
+# Arcade API (Fase 3) — DEPRECADO
+
+> ⚠️ **Reemplazado por Supabase.** En v2.0 los leaderboards y la autenticación pasaron a
+> Supabase directo (ver `supabase/schema.sql` y `src/data/`). Este backend ya no se usa ni
+> se despliega; se conserva solo como referencia histórica.
 
 Backend de leaderboards: **FastAPI + SQLModel + SQLite**.
 

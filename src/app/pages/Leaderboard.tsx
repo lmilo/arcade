@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import { getGame } from '../../games/registry'
 import { fetchLeaderboard } from '../../data/leaderboard'
 import type { Leaderboard as LeaderboardData } from '../../data/leaderboard'
+import { isOnline } from '../../data/supabase'
+import { useSession } from '../useSession'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
 export function Leaderboard() {
   const { id } = useParams()
   const entry = id ? getGame(id) : undefined
+  const { session } = useSession()
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading')
   const [data, setData] = useState<LeaderboardData | null>(null)
 
@@ -49,12 +52,17 @@ export function Leaderboard() {
       </nav>
 
       <div className="lb-body">
+        {isOnline() && !session && (
+          <Link to="/profile" className="lb-login">
+            Inicia sesión para aparecer en el ranking →
+          </Link>
+        )}
         {status === 'loading' && <p className="lb-msg">Cargando ranking…</p>}
         {status === 'error' && (
           <p className="lb-msg">
-            El ranking no está disponible. ¿El backend está encendido?
+            El ranking online no está disponible (sin conexión o sin configurar).
             <br />
-            <code>uvicorn server.main:app --port 8000</code>
+            Tus récords locales se siguen guardando igual.
           </p>
         )}
         {status === 'ok' && data && (
@@ -66,6 +74,7 @@ export function Leaderboard() {
               {data.entries.map((e, i) => (
                 <li key={i} className={e.isYou ? 'lb-row you' : 'lb-row'}>
                   <span className="lb-rank">{MEDALS[i] ?? i + 1}</span>
+                  <span className="lb-avatar">{e.avatar}</span>
                   <span className="lb-name">
                     {e.name}
                     {e.isYou && <span className="lb-tag">tú</span>}
@@ -77,6 +86,7 @@ export function Leaderboard() {
             {!youInTop && data.you && data.yourRank && (
               <div className="lb-you-summary">
                 <span className="lb-rank">{data.yourRank}</span>
+                <span className="lb-avatar">{data.you.avatar}</span>
                 <span className="lb-name">
                   {data.you.name}
                   <span className="lb-tag">tú</span>

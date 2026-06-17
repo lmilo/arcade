@@ -1,8 +1,8 @@
-# 🕹️ Arcade
+# 🕹️ Pixel Pulse
 
-Un arcade web de **20 juegos clásicos** que se siente vivo: motor propio en Canvas
-con audio, partículas y screen-shake, perfil con progresión local y leaderboards
-online con retos por link.
+**Pixel Pulse** es un arcade web de **20 juegos clásicos** que se sienten vivos: motor propio
+en Canvas con audio, partículas y screen-shake, perfil con progresión local, y leaderboards
+online (con login) y retos por link.
 
 > Reescritura completa del proyecto original en Python/tkinter (archivado en la rama
 > `legacy-python` y el tag `python-v1`).
@@ -11,22 +11,18 @@ online con retos por link.
 
 ## 🚀 Cómo correr
 
-Requisitos: **Node 20+** y, para los leaderboards, **Python 3.12+**.
+Requisitos: **Node 20+**. El online usa **Supabase** (opcional para jugar).
 
 ```bash
-# Frontend
 npm install
-npm run dev            # http://localhost:5173
-
-# Backend de leaderboards (opcional — el juego funciona sin él)
-python -m venv server/.venv
-server/.venv/bin/pip install -r server/requirements.txt
-server/.venv/bin/uvicorn server.main:app --port 8000
+cp .env.example .env.local   # pega tu Project URL y anon key de Supabase
+npm run dev                  # http://localhost:5173
 ```
 
-En desarrollo, Vite hace proxy de `/api` al backend, así que no hay que tocar CORS ni
-URLs. Si el backend está apagado, los rankings se desactivan solos y todo lo demás
-(juego, récords locales, logros) sigue funcionando.
+El online es **Supabase directo** (Postgres + Auth + RLS): no hay servidor propio que
+levantar. Sin `.env.local`, la app funciona offline (juego + récords locales) y el ranking
+se desactiva solo. El esquema de la base está en `supabase/schema.sql` (pegar en el SQL Editor
+del proyecto Supabase).
 
 ```bash
 npm run build         # build de producción
@@ -75,10 +71,11 @@ src/
 │                 # Input (teclado/táctil/puntero), Renderer (DPR),
 │                 # Audio (sfx por Web Audio), Particles, Camera (shake), Tween
 ├─ games/         # un directorio por juego + registry.ts (catálogo)
-├─ app/           # shell React: menú, juego (GameHost), perfil, ranking, modal de ayuda
-├─ data/          # store local (perfil/récords/logros), cliente de leaderboard
+├─ app/           # shell React: menú, juego (GameHost), perfil/cuenta, ranking, ayuda
+├─ data/          # store local + cliente Supabase (auth, leaderboard, perfil)
 └─ shared/        # tema/paleta
-server/           # backend de leaderboards: FastAPI + SQLModel + SQLite
+supabase/         # schema.sql: tablas, RLS y RPCs para pegar en Supabase
+server/           # backend FastAPI legado (DEPRECADO, reemplazado por Supabase)
 ```
 
 **Añadir un juego** = una clase que extiende `Game` (`update`, `render`, `reset`,
@@ -94,13 +91,13 @@ y el botón de compartir.
   transiciones; pantalla de inicio con botón Iniciar.
 - **Progresión local:** perfil con avatar y nombre, récord por juego, logros y monedas,
   todo en `localStorage`.
-- **Social:** leaderboards globales por juego e identidad anónima por dispositivo, y
-  **retos por link** (`/play/:id?reto=N&por=nombre`) para desafiar a un amigo.
+- **Social:** cuentas con **login** (Supabase Auth), leaderboards globales por juego con tu
+  posición resaltada, y **retos por link** (`/play/:id?reto=N&por=nombre`) para desafiar a un amigo.
 
 ---
 
 ## 🛠️ Stack
 
 - **Frontend:** Vite + TypeScript + React (shell) + Canvas2D (juegos).
-- **Backend:** FastAPI + SQLModel + SQLite (cambiar a Postgres es solo `DATABASE_URL`).
+- **Online:** Supabase (Postgres + Auth + RLS), consumido directo desde el front.
 - Sin dependencias de motores de juego: el engine es propio.

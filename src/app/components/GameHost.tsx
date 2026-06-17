@@ -10,6 +10,8 @@ import { audio } from '../../engine/Audio'
 import { store } from '../../data/store'
 import type { Achievement } from '../../data/achievements'
 import { submitScore } from '../../data/leaderboard'
+import { isOnline } from '../../data/supabase'
+import { useSession } from '../useSession'
 import { HelpModal } from './HelpModal'
 
 export interface Challenge {
@@ -49,6 +51,7 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
   const [won, setWon] = useState(false)
   const [toasts, setToasts] = useState<Achievement[]>([])
   const [copied, setCopied] = useState(false)
+  const { session } = useSession()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -241,6 +244,11 @@ export function GameHost({ entry, challenge }: { entry: GameEntry; challenge?: C
               <button className="btn-primary" onClick={restart}>
                 ↻ Jugar de nuevo
               </button>
+              {isOnline() && !session && (
+                <Link to="/profile" className="login-hint">
+                  Inicia sesión para competir en el ranking →
+                </Link>
+              )}
               {sizePicker}
             </div>
           )}
