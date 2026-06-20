@@ -4,6 +4,8 @@
 en Canvas con audio, partículas y screen-shake, perfil con progresión local, y leaderboards
 online (con login) y retos por link.
 
+🔗 **En vivo:** https://arcade-xi-sable.vercel.app
+
 > Reescritura completa del proyecto original en Python/tkinter (archivado en la rama
 > `legacy-python` y el tag `python-v1`).
 
