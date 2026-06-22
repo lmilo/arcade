@@ -5,12 +5,26 @@
   --accent2: #22d3ee;
   --text: #e2e8f0;
   --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --soft: rgba(255, 255, 255, 0.05);
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
   color-scheme: dark;
   font: 16px/1.5 var(--sans);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Tema claro (los juegos en canvas se mantienen oscuros como "pantalla"). */
+[data-theme='light'] {
+  --bg: #eef0f5;
+  --card: #ffffff;
+  --accent2: #0891b2;
+  --text: #14141f;
+  --muted: #5b6472;
+  --border: rgba(0, 0, 0, 0.12);
+  --soft: rgba(0, 0, 0, 0.05);
+  color-scheme: light;
 }
 
 * {
@@ -75,7 +89,7 @@ a {
   gap: 6px;
   padding: 24px 16px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 16px;
   transition:
     transform 0.15s ease,
@@ -115,7 +129,7 @@ a {
   align-items: center;
   gap: 16px;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border);
 }
 
 .back {
@@ -247,8 +261,8 @@ canvas {
 
 .seg {
   display: inline-flex;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--soft);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 3px;
   gap: 3px;
@@ -279,7 +293,7 @@ canvas {
 .side {
   width: 200px;
   flex-shrink: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid var(--border);
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
@@ -313,7 +327,7 @@ canvas {
   width: 100%;
   padding: 14px 16px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
   font-size: 14px;
@@ -349,7 +363,7 @@ canvas {
   max-height: 85vh;
   overflow-y: auto;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 24px;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
@@ -405,7 +419,7 @@ canvas {
   .side {
     width: auto;
     border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid var(--border);
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -514,7 +528,7 @@ canvas {
   gap: 8px;
   padding: 8px 12px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 999px;
   transition: border-color 0.15s ease;
 }
@@ -570,13 +584,13 @@ canvas {
   align-items: center;
   justify-content: center;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 28px;
 }
 
 .name-input {
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
   font-size: 18px;
@@ -636,7 +650,7 @@ canvas {
   gap: 12px;
   padding: 12px 16px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 
@@ -673,7 +687,7 @@ canvas {
   gap: 4px;
   padding: 16px 12px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 14px;
   opacity: 0.5;
 }
@@ -765,7 +779,7 @@ canvas {
   gap: 12px;
   padding: 12px 16px;
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 
@@ -817,7 +831,7 @@ canvas {
 /* ---------- Cuenta / login ---------- */
 .account {
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px;
 }
@@ -909,6 +923,27 @@ canvas {
   margin-top: 10px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
 }
 
 .lb-login {

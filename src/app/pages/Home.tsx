@@ -1,17 +1,23 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GAMES } from '../../games/registry'
 import { store } from '../../data/store'
 import { isOnline } from '../../data/supabase'
+import { getTheme, toggleTheme } from '../../data/theme'
 import { useSession } from '../useSession'
 
 export function Home() {
   const profile = store.getProfile()
   const { session } = useSession()
   const guest = isOnline() && !session
+  const [theme, setTheme] = useState(getTheme())
 
   return (
     <div className="home">
       <header className="home-header">
+        <button className="theme-toggle" onClick={() => setTheme(toggleTheme())} title="Cambiar tema" aria-label="Cambiar tema">
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
         {guest ? (
           <Link to="/profile" className="profile-chip guest">
             <span className="profile-chip-avatar">👤</span>
