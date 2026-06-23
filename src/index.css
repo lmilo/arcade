@@ -7,6 +7,9 @@
   --muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.08);
   --soft: rgba(255, 255, 255, 0.05);
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
   color-scheme: dark;
@@ -201,6 +204,13 @@ canvas {
   backdrop-filter: blur(3px);
   text-align: center;
   padding: 24px;
+  /* El overlay va sobre el canvas oscuro: fija la paleta oscura sin importar el tema. */
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --soft: rgba(255, 255, 255, 0.05);
+  --accent2: #22d3ee;
+  color: var(--text);
 }
 
 .overlay-title {
